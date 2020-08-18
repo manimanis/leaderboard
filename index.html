@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <div id="leaderboard">
+    <h1>Leaderboard - Top-10K.</h1>
+    <div class="items_per_page">
+      <select v-model="items_per_page" v-on:change="itemsPerPageChanged()">
+        <option value="10">10</option>
+        <option value="25">25</option>
+        <option value="50">50</option>
+        <option value="100">100</option>
+      </select>
+    </div>
+    <div class="search_terms">
+      <input type="search" id="search_term" placeholder="Search" v-model="searchTerm" v-on:keyup="searchTermChanged()">
+    </div>
+    <div class="search_count">There are {{filtered_data.length}} items in {{pages_count}} pages.</div>
+    <table id="table_1">
+      <tr>
+        <th>Order</th>
+        <th v-on:click="sortByColumn('rank')">Rank</th>
+        <th v-on:click="sortByColumn('name')">Name</th>
+        <th v-on:click="sortByColumn('country')">Country</th>
+        <th v-on:click="sortByColumn('totalPoints')">Total Points</th>
+        <th v-on:click="sortByColumn('collaborationPoints')">Collabortion Points</th>
+        <th v-on:click="sortByColumn('learningHours')">Learning Hours</th>
+        <th v-on:click="sortByColumn('skillIQ')">Skill IQ</th>
+      </tr>
+      <tr v-for="row, idx in visible_data">
+        <td>{{current_page * items_per_page + idx+1}}</td>
+        <td>{{row.rank}}</td>
+        <td>{{row.name}}</td>
+        <td>{{row.nountry}}</td>
+        <td>{{row.totalPoints}}</td>
+        <td>{{row.collabortionPoints}}</td>
+        <td>{{row.learningHours}}</td>
+        <td>{{row.skillIQ}}</td>
+      </tr>
+    </table>
+    <div v-if="pages_count > 0">
+      <span v-if="pages_count > 1 && current_page > 0">
+        <a href="#" v-on:click.prevent="setPage(0)">&lt;&lt;</a>
+      </span>
+      <span v-if="pages_count > 1 && current_page > 0">
+        <a href="#" v-on:click.prevent="setPage(current_page - 1)">&lt;</a>
+      </span>
+
+      <span v-if="navigation_pages.length > 1" v-for="num_page in navigation_pages">
+        <a href="#" v-on:click.prevent="setPage(num_page - 1)">{{num_page}}</a>
+      </span>
+
+      <span v-if="pages_count > 1 && current_page < pages_count - 1">
+        <a href="#" v-on:click.prevent="setPage(current_page + 1)">&gt;</a>
+      </span>
+      <span v-if="pages_count > 1 && current_page < pages_count - 1">
+        <a href="#" v-on:click.prevent="setPage(pages_count - 1)">&gt;&gt;</a>
+      </span>
+    </div>
+  </div>
+  <script src="js/vue.min.js"></script>
+  <script>
+    const app = new Vue({
+      el: '#leaderboard',
+      data: {
+        leaderboard_data: [],
+        filtered_data: [],
+        visible_data: [],
+        current_page: 0,
+        items_per_page: 10,
+        pages_count: 0,
+        navigation_pages: [],
+        searchTerm: '',
+        sort_order: { column: '', direction: 0 }
+      },
+      mounted: function () {
+        this.loadLeaderboardData();
+      },
+      methods: {
+        loadLeaderboardData: function () {
+          fetch('leaderboard.json', {
+            method: 'GET'
+          })
+            .then(response => response.json())
+            .then(data => {
+              this.current_page = 0;
+              this.leaderboard_data = data.map(row => {
+                return {
+                  rank: +row['Rank'],
+                  name: row['Name'],
+                  country: row['Country'],
+                  totalPoints: + row['Total Points'],
+                  collaborationPoints: +row['Collabortion Points'],
+                  learningHours: +row['Learning Hours'],
+                  skillIQ: +row['Skill IQ']
+                };
+              });
+              this.setSearchTerm(this.searchTerm);
+              this.setPage(this.current_page);
+            });
+        },
+        setPage: function (page) {
+          let startIndex = page * +this.items_per_page;
+          let endIndex = startIndex + +this.items_per_page;
+          this.current_page = page;
+          this.visible_data = this.filtered_data.slice(startIndex, endIndex);
+          this.navigationsPagesChanged();
+        },
+        setSearchTerm: function (searchTerm) {
+          this.searchTerm = searchTerm;
+          searchTerm = searchTerm.toLowerCase().trim();
+          this.filtered_data = this.leaderboard_data.filter(row => searchTerm.length === 0 ||
+            Object.values(row)
+              .map(val => val.toString())
+              .reduce((prev, curr) => prev || curr.toLowerCase().indexOf(searchTerm) !== -1, false));
+          this.pagesCountChanged();
+          this.navigationsPagesChanged();
+          this.setPage(0);
+        },
+        sortByColumn: function (colName) {
+          const compareStr = (s1, s2) => {
+            s1 = s1.toLowerCase();
+            s2 = s2.toLowerCase();
+            if (s1 > s2) return 1;
+            else if (s1 < s2) return -1;
+            return 0;
+          };
+          if (this.sort_order.column === colName) {
+            if (!this.sort_order.direction) {
+              this.sort_order.direction = 1;
+            } else if (this.sort_order.direction === 1) {
+              this.sort_order.direction = -1;
+            } else {
+              colName = 'rank';
+              this.sort_order.direction = 1;
+            }
+          } else {
+            this.sort_order.direction = 1;
+          }
+          this.sort_order.column = colName;
+          const {direction} = this.sort_order;
+          if (['name', 'country'].includes(colName)) {
+            this.filtered_data.sort((r1, r2) => direction * compareStr(r1[colName], r2[colName]));
+          } else {
+            this.filtered_data.sort((r1, r2) => direction * (r1[colName] - r2[colName]));
+          }
+          this.setPage(this.current_page);
+        },
+        pagesCountChanged: function () {
+          this.pages_count = Math.ceil(this.filtered_data.length / +this.items_per_page);
+        },
+        navigationsPagesChanged: function () {
+          this.navigation_pages = [];
+          for (let i = this.current_page; i < this.current_page + 7; i++) {
+            if (i < this.pages_count) {
+              this.navigation_pages.push(i + 1);
+            }
+          }
+        },
+        itemsPerPageChanged: function () {
+          this.pagesCountChanged();
+          this.setPage(this.current_page);
+        },
+        searchTermChanged: function () {
+          this.setSearchTerm(this.searchTerm);
+        }
+      }
+    });
+
+  </script>
+</body>
+
+</html>

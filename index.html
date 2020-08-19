@@ -5,62 +5,71 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Document</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
   <div id="leaderboard">
     <h1>Leaderboard - Top-10K.</h1>
     <div class="items_per_page">
+      Show
       <select v-model="items_per_page" v-on:change="itemsPerPageChanged()">
         <option value="10">10</option>
         <option value="25">25</option>
         <option value="50">50</option>
         <option value="100">100</option>
       </select>
+      entries
     </div>
     <div class="search_terms">
+      <label for="search_term">Search</label>
       <input type="search" id="search_term" placeholder="Search" v-model="searchTerm" v-on:keyup="searchTermChanged()">
     </div>
     <div class="search_count">There are {{filtered_data.length}} items in {{pages_count}} pages.</div>
-    <table id="table_1">
-      <tr>
-        <th>Order</th>
-        <th v-on:click="sortByColumn('rank')">Rank</th>
-        <th v-on:click="sortByColumn('name')">Name</th>
-        <th v-on:click="sortByColumn('country')">Country</th>
-        <th v-on:click="sortByColumn('totalPoints')">Total Points</th>
-        <th v-on:click="sortByColumn('collaborationPoints')">Collabortion Points</th>
-        <th v-on:click="sortByColumn('learningHours')">Learning Hours</th>
-        <th v-on:click="sortByColumn('skillIQ')">Skill IQ</th>
-      </tr>
-      <tr v-for="row, idx in visible_data">
-        <td>{{current_page * items_per_page + idx+1}}</td>
-        <td>{{row.rank}}</td>
-        <td>{{row.name}}</td>
-        <td>{{row.country}}</td>
-        <td>{{row.totalPoints}}</td>
-        <td>{{row.collabortionPoints}}</td>
-        <td>{{row.learningHours}}</td>
-        <td>{{row.skillIQ}}</td>
-      </tr>
+    <table id="table_1" class="table">
+      <thead>
+        <tr>
+          <th>Order</th>
+          <th v-on:click="sortByColumn('rank')" v-bind:class="getSortingClass('rank')">Rank</th>
+          <th v-on:click="sortByColumn('name')" v-bind:class="getSortingClass('name')">Name</th>
+          <th v-on:click="sortByColumn('country')" v-bind:class="getSortingClass('country')">Country</th>
+          <th v-on:click="sortByColumn('totalPoints')" v-bind:class="getSortingClass('totalPoints')">Total Points</th>
+          <th v-on:click="sortByColumn('collaborationPoints')" v-bind:class="getSortingClass('rancollaborationPointsk')">Collabortion Points</th>
+          <th v-on:click="sortByColumn('learningHours')" v-bind:class="getSortingClass('learningHours')">Learning Hours</th>
+          <th v-on:click="sortByColumn('skillIQ')" v-bind:class="getSortingClass('skillIQ')">Skill IQ</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="row, idx in visible_data">
+          <td class="number">{{current_page * items_per_page + idx+1}}</td>
+          <td class="number">{{row.rank}}</td>
+          <td>{{row.name}}</td>
+          <td>{{row.country}}</td>
+          <td class="number">{{row.totalPoints}}</td>
+          <td class="number">{{row.collabortionPoints}}</td>
+          <td class="number">{{row.learningHours}}</td>
+          <td class="number">{{row.skillIQ}}</td>
+        </tr>
+      </tbody>
     </table>
-    <div v-if="pages_count > 0">
-      <span v-if="pages_count > 1 && current_page > 0">
-        <a href="#" v-on:click.prevent="setPage(0)">&lt;&lt;</a>
+    <div class="navigation" v-if="pages_count > 0">
+      <span v-if="!navigation_pages.includes(1)">
+        <a href="#" v-on:click.prevent="setPage(0)">1</a>
       </span>
       <span v-if="pages_count > 1 && current_page > 0">
         <a href="#" v-on:click.prevent="setPage(current_page - 1)">&lt;</a>
       </span>
 
       <span v-if="navigation_pages.length > 1" v-for="num_page in navigation_pages">
-        <a href="#" v-on:click.prevent="setPage(num_page - 1)">{{num_page}}</a>
+        <a v-if="num_page-1 !== current_page" href="#" v-on:click.prevent="setPage(num_page - 1)">{{num_page}}</a>
+        <a v-else>{{num_page}}</a>
       </span>
 
       <span v-if="pages_count > 1 && current_page < pages_count - 1">
         <a href="#" v-on:click.prevent="setPage(current_page + 1)">&gt;</a>
       </span>
-      <span v-if="pages_count > 1 && current_page < pages_count - 1">
-        <a href="#" v-on:click.prevent="setPage(pages_count - 1)">&gt;&gt;</a>
+      <span v-if="!navigation_pages.includes(pages_count)">
+        <a href="#" v-on:click.prevent="setPage(pages_count - 1)">{{pages_count}}</a>
       </span>
     </div>
   </div>
@@ -81,6 +90,9 @@
       },
       mounted: function () {
         this.loadLeaderboardData();
+      },
+      computed: {
+        
       },
       methods: {
         loadLeaderboardData: function () {
@@ -152,13 +164,26 @@
           }
           this.setPage(this.current_page);
         },
+        getSortingClass: function (colName) {
+          if (colName !== this.sort_order.column) {
+            return {};
+          }
+          if (this.sort_order.direction === 1) {
+            return {'sort_asc': true};
+          } else if (this.sort_order.direction === -1) {
+            return {'sort_desc': true};
+          }
+          return {};
+        },
         pagesCountChanged: function () {
           this.pages_count = Math.ceil(this.filtered_data.length / +this.items_per_page);
         },
         navigationsPagesChanged: function () {
           this.navigation_pages = [];
-          for (let i = this.current_page; i < this.current_page + 7; i++) {
-            if (i < this.pages_count) {
+          let startPage = this.current_page - 3;
+          let endPage = startPage + 6;
+          for (let i = startPage; i <= endPage; i++) {
+            if (i>= 0 && i < this.pages_count) {
               this.navigation_pages.push(i + 1);
             }
           }

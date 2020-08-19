@@ -10,6 +10,44 @@
 
 <body>
   <div id="leaderboard">
+    <div class="leaders">
+      <div class="column">
+        <h2>Learning Leaders</h2>
+        <div class="card" v-for="leader in leaders.learningHours">
+          <div class="image">
+            <img src="imgs/Top-learner.png" alt="Top learner">
+          </div>
+          <div class="infos">
+            <h3>{{leader.name}}</h3>
+            <p>{{leader.learningHours}} learning hours. <b>{{leader.country}}</b></p>
+          </div>
+        </div>
+      </div>
+      <div class="column">
+        <h2>Skill IQ Leaders</h2>
+        <div class="card" v-for="leader in leaders.skillIQ">
+          <div class="image">
+            <img src="imgs/skill-IQ-trimmed.png" alt="Top Skill IQ">
+          </div>
+          <div class="infos">
+            <h3>{{leader.name}}</h3>
+            <p>{{leader.skillIQ}} skill IQ score. <b>{{leader.country}}</b></p>
+          </div>
+        </div>
+      </div>
+      <div class="column">
+        <h2>Top Collaborators</h2>
+        <div class="card" v-for="leader in leaders.collaborationPoints">
+          <div class="image">
+            <img src="imgs/collaborator-badge.png" alt="Top learner">
+          </div>
+          <div class="infos">
+            <h3>{{leader.name}}</h3>
+            <p>{{leader.collaborationPoints}} collaboration points. <b>{{leader.country}}</b></p>
+          </div>
+        </div>
+      </div>
+    </div>
     <h1>Leaderboard - Top-10K.</h1>
     <div class="items_per_page">
       Show
@@ -34,8 +72,10 @@
           <th v-on:click="sortByColumn('name')" v-bind:class="getSortingClass('name')">Name</th>
           <th v-on:click="sortByColumn('country')" v-bind:class="getSortingClass('country')">Country</th>
           <th v-on:click="sortByColumn('totalPoints')" v-bind:class="getSortingClass('totalPoints')">Total Points</th>
-          <th v-on:click="sortByColumn('collaborationPoints')" v-bind:class="getSortingClass('rancollaborationPointsk')">Collabortion Points</th>
-          <th v-on:click="sortByColumn('learningHours')" v-bind:class="getSortingClass('learningHours')">Learning Hours</th>
+          <th v-on:click="sortByColumn('collaborationPoints')" v-bind:class="getSortingClass('collaborationPoints')">
+            Collabortion Points</th>
+          <th v-on:click="sortByColumn('learningHours')" v-bind:class="getSortingClass('learningHours')">Learning Hours
+          </th>
           <th v-on:click="sortByColumn('skillIQ')" v-bind:class="getSortingClass('skillIQ')">Skill IQ</th>
         </tr>
       </thead>
@@ -46,7 +86,7 @@
           <td>{{row.name}}</td>
           <td>{{row.country}}</td>
           <td class="number">{{row.totalPoints}}</td>
-          <td class="number">{{row.collabortionPoints}}</td>
+          <td class="number">{{row.collaborationPoints}}</td>
           <td class="number">{{row.learningHours}}</td>
           <td class="number">{{row.skillIQ}}</td>
         </tr>
@@ -86,14 +126,22 @@
         pages_count: 0,
         navigation_pages: [],
         searchTerm: '',
-        sort_order: { column: '', direction: 0 }
+        sort_order: { column: '', direction: 0 },
+        maxValues: {
+          learningHours: 0,
+          skillIQ: 0,
+          collaborationPoints: 0
+        },
+        leaders: {
+          learningHours: [],
+          skillIQ: [],
+          collaborationPoints: []
+        }
       },
       mounted: function () {
         this.loadLeaderboardData();
       },
-      computed: {
-        
-      },
+      computed: {},
       methods: {
         loadLeaderboardData: function () {
           fetch('leaderboard.json', {
@@ -108,14 +156,32 @@
                   name: row['Name'],
                   country: row['Country'],
                   totalPoints: + row['Total Points'],
-                  collaborationPoints: +row['Collabortion Points'],
+                  collaborationPoints: (!row['Collaboration Points']) ? 0 : +row['Collaboration Points'],
                   learningHours: +row['Learning Hours'],
                   skillIQ: +row['Skill IQ']
                 };
               });
+
+              Object.keys(this.maxValues)
+                .forEach(key => this.maxValues[key] = this.getTopColumn(key, 3));
+
+              Object.keys(this.leaders)
+                .forEach(key => {
+                  this.maxValues[key].forEach(value => {
+                    this.leaders[key] = this.leaders[key].concat(this.leaderboard_data.filter(item => value == item[key]))
+                  });
+                  this.leaders[key] = this.leaders[key].slice(0, 3);
+                });
+
               this.setSearchTerm(this.searchTerm);
               this.setPage(this.current_page);
             });
+        },
+        getTopColumn: function (colName, n) {
+          let uniqueValues = this.leaderboard_data.map(row => row[colName]);
+          uniqueValues = uniqueValues.filter((value, index) => uniqueValues.indexOf(value) === index);
+          uniqueValues.sort((a, b) => +a - +b);
+          return uniqueValues.slice(-n).reverse();
         },
         setPage: function (page) {
           let startIndex = page * +this.items_per_page;
@@ -156,7 +222,7 @@
             this.sort_order.direction = 1;
           }
           this.sort_order.column = colName;
-          const {direction} = this.sort_order;
+          const { direction } = this.sort_order;
           if (['name', 'country'].includes(colName)) {
             this.filtered_data.sort((r1, r2) => direction * compareStr(r1[colName], r2[colName]));
           } else {
@@ -169,9 +235,9 @@
             return {};
           }
           if (this.sort_order.direction === 1) {
-            return {'sort_asc': true};
+            return { 'sort_asc': true };
           } else if (this.sort_order.direction === -1) {
-            return {'sort_desc': true};
+            return { 'sort_desc': true };
           }
           return {};
         },
@@ -183,7 +249,7 @@
           let startPage = this.current_page - 3;
           let endPage = startPage + 6;
           for (let i = startPage; i <= endPage; i++) {
-            if (i>= 0 && i < this.pages_count) {
+            if (i >= 0 && i < this.pages_count) {
               this.navigation_pages.push(i + 1);
             }
           }

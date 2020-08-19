@@ -4,6 +4,40 @@ body {
   color: #333333;
 }
 
+.leaders {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.column {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.column h2 {
+  width: 100%;
+}
+
+.card {
+  box-sizing: content-box;
+  margin: 0.5em;
+  padding: 0.5em;
+  border: #ccc solid 1px;
+  width: 100%;
+  border-radius: 0.25em;
+  display: flex;
+}
+
+.card .image {
+  width: 96px;
+  height: 96px;
+}
+
+.image img {
+  width: 100%;
+}
+
 .table {
   border-collapse: collapse;
   margin-bottom: 10px;
@@ -63,4 +97,10 @@ body {
 
 .navigation span {
   padding: 7px 10px;
+}
+
+@media screen and (min-width: 690px) {
+  .column {
+    width: 33.3%;
+  }
 }
